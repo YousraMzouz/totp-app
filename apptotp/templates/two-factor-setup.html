@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block page_content %}
+    <h1>Configuration de l'authentification a deux facteurs</h1>
+    <p>Vous avez presque termine ! Lancez FreeOTP sur votre smartphone et scannez le QR Code suivant avec celui-ci :</p>
+    <p><img id="qrcode" src="{{ url_for('qrcode') }}"></p>
+    <p>J'ai fini, aller a <a href="{{ url_for('login') }}">Login</a> page!</p>
+{% endblock %}
