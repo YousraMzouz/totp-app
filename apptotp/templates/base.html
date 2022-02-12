@@ -16,15 +16,15 @@
         </div>
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('index') }}">Page d'accueil</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 {% if current_user.is_authenticated %}
-                <li><a href="{{ url_for('logout') }}">Log Out</a></li>
+                <li><a href="{{ url_for('logout') }}">Se déconnecter</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 {% else %}
-                <li><a href="{{ url_for('login') }}">Log In</a></li>
+                <li><a href="{{ url_for('login') }}">Se connecter/a></li>
                 {% endif %}
             </ul>
         </div>
