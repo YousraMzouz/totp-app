@@ -5,7 +5,7 @@ import base64
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
+from flask_login import login_user, UserMixin, logout_user,LoginManager ,  current_user
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -13,18 +13,18 @@ from wtforms.validators import *
 import onetimepass
 import pyqrcode
 
-# create application instance
+# Créer des instances de l'application 
 app = Flask(__name__)
 app.config.from_object('config')
 
-# initialize extensions
+# initialiser les extensions : 
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 lm = LoginManager(app)
 
 
 class User(UserMixin, db.Model):
-    """User model."""
+    """Modèle d'utilisateur."""
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
@@ -34,12 +34,12 @@ class User(UserMixin, db.Model):
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if self.otp_secret is None:
-            # generate a random secret
+            # générer un secret aléatoire : 
             self.otp_secret = base64.b32encode(os.urandom(10)).decode('utf-8')
 
     @property
     def password(self):
-        raise AttributeError('password is not a readable attribute')
+        raise AttributeError('mot de passe non lisible')
 
     @password.setter
     def password(self, password):
@@ -58,21 +58,20 @@ class User(UserMixin, db.Model):
 
 @lm.user_loader
 def load_user(user_id):
-    """User loader callback for Flask-Login."""
     return User.query.get(int(user_id))
 
 
 class RegisterForm(FlaskForm):
-    """Registration form."""
-    username = StringField('Username', validators=[InputRequired(), Length(1, 64)])
-    password = PasswordField('Password', validators=[InputRequired()])
-    password_again = PasswordField('Confirm password ',
+    """Création de compte."""
+    username = StringField('Nom d utilisateur', validators=[InputRequired(), Length(1, 64)])
+    password = PasswordField('Mot de passe', validators=[InputRequired()])
+    password_again = PasswordField('Confirmer le mot de passe ',
                                    validators=[InputRequired(), EqualTo('password')])
     submit = SubmitField('Register')
 
 
 class LoginForm(FlaskForm):
-    """Login form."""
+    """Connexion."""
     username = StringField('Username', validators=[InputRequired(), Length(1, 64)])
     password = PasswordField('Password', validators=[InputRequired()])
     token = StringField('Token', validators=[InputRequired(), Length(6, 6)])
@@ -86,22 +85,23 @@ def index():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration route."""
+    """registration."""
     if current_user.is_authenticated:
-        # if user is logged in we get out of here
+        # Si l'utilisateur est connecté, pn passe
         return redirect(url_for('index'))
+    
     form = RegisterForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user is not None:
-            flash('Username already exists.')
+            flash('Ce nom d utilisateur existe déjà.')
             return redirect(url_for('register'))
-        # add new user to the database
+        # On ajoute l'utilisateur dans database 
         user = User(username=form.username.data, password=form.password.data)
         db.session.add(user)
         db.session.commit()
 
-        # redirect to the two-factor auth page, passing username in session
+        # Redirection vers la page d'authentification à deux facteurs 
         session['username'] = user.username
         return redirect(url_for('two_factor_setup'))
     return render_template('register.html', form=form)
@@ -114,8 +114,9 @@ def two_factor_setup():
     user = User.query.filter_by(username=session['username']).first()
     if user is None:
         return redirect(url_for('index'))
-    # since this page contains the sensitive qrcode, make sure the browser
-    # does not cache it
+    
+    # il faut s'assurer que le browser ne cache pas le qrcode
+    
     return render_template('two-factor-setup.html'), 200, {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -130,10 +131,10 @@ def qrcode():
     if user is None:
         abort(404)
 
-    # for added security, remove username from session
+    # Pour une meilleure sécurité, on va enlever le nom d'utilisateur dans la session 
     del session['username']
 
-    # render qrcode for FreeTOTP
+   
     url = pyqrcode.create(user.get_totp_uri())
     stream = BytesIO()
     url.svg(stream, scale=3)
@@ -146,33 +147,32 @@ def qrcode():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login route."""
+   
     if current_user.is_authenticated:
-        # if user is logged in we get out of here
+        # s'il est connecté on passe 
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.verify_password(form.password.data) or \
-                not user.verify_totp(form.token.data):
-            flash('Invalid username, password or token.')
+        if not user.verify_password(form.password.data) or user is None or not user.verify_totp(form.token.data):
+            flash(' Nom d utilisateur ou mot de passe incorrecte, vérifiez aussi le token. ')
             return redirect(url_for('login'))
 
-        # log user in
+        
         login_user(user)
-        flash('You are now logged in!')
+        flash('Vous êtes connecté!')
         return redirect(url_for('index'))
     return render_template('login.html', form=form)
 
 
 @app.route('/logout')
 def logout():
-    """User logout route."""
+ 
     logout_user()
     return redirect(url_for('index'))
 
 
-# create database tables if they don't exist yet
+# créer base de donées s'elle n'existe pas déjà:
 db.create_all()
 
 
